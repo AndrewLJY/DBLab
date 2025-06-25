@@ -23,12 +23,21 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Catalog {
 
+    private HashMap<String, DbFile> name_DbFile;
+    private HashMap<Integer, DbFile> id_DbFile;
+    private HashMap<Integer, String> id_Pk;
+    private HashMap<Integer, String> id_Name;
+
     /**
      * Constructor.
      * Creates a new, empty catalog.
      */
     public Catalog() {
         // some code goes here
+        name_DbFile = new HashMap<String, DbFile>();
+        id_DbFile = new HashMap<Integer, DbFile>();
+        id_Pk = new HashMap<Integer, String>();
+        id_Name = new HashMap<Integer, String>();
     }
 
     /**
@@ -42,6 +51,10 @@ public class Catalog {
      */
     public void addTable(DbFile file, String name, String pkeyField) {
         // some code goes here
+        name_DbFile.put(name, file);
+        id_DbFile.put(file.getId(), file);
+        id_Pk.put(file.getId(), pkeyField);
+        id_Name.put(file.getId(), name);
     }
 
     public void addTable(DbFile file, String name) {
@@ -65,7 +78,12 @@ public class Catalog {
      */
     public int getTableId(String name) throws NoSuchElementException {
         // some code goes here
-        return 0;
+        if(!name_DbFile.containsKey(name)){
+            throw new NoSuchElementException("No such table with name : " + name);
+        }
+
+        DbFile dbFile = name_DbFile.get(name);
+        return dbFile.getId();
     }
 
     /**
@@ -76,7 +94,12 @@ public class Catalog {
      */
     public TupleDesc getTupleDesc(int tableid) throws NoSuchElementException {
         // some code goes here
-        return null;
+        if(!id_DbFile.containsKey(tableid)){
+            throw new NoSuchElementException("No such tuple desc with id : " + tableid);
+        }
+        
+        DbFile dbFile = id_DbFile.get(tableid);
+        return dbFile.getTupleDesc();
     }
 
     /**
@@ -87,27 +110,39 @@ public class Catalog {
      */
     public DbFile getDatabaseFile(int tableid) throws NoSuchElementException {
         // some code goes here
-        return null;
+        if(!id_DbFile.containsKey(tableid)){
+            throw new NoSuchElementException("No such database file with id : " + tableid);
+        }
+        
+        return id_DbFile.get(tableid);
     }
 
     public String getPrimaryKey(int tableid) {
         // some code goes here
-        return null;
+        return id_Pk.get(tableid);
     }
 
     public Iterator<Integer> tableIdIterator() {
         // some code goes here
-        return null;
+        return id_DbFile.keySet().iterator();
     }
 
-    public String getTableName(int id) {
+    public String getTableName(int id) throws NoSuchElementException {
         // some code goes here
-        return null;
+        if(!id_Name.containsKey(id)){
+            throw new NoSuchElementException("No such table name with id : " + id);
+        }
+        
+        return id_Name.get(id);
     }
     
     /** Delete all tables from the catalog */
     public void clear() {
         // some code goes here
+        name_DbFile.clear();
+        id_DbFile.clear();
+        id_Pk.clear();
+        id_Name.clear();
     }
     
     /**
