@@ -4,6 +4,7 @@ import simpledb.common.Database;
 import simpledb.common.Permissions;
 import simpledb.common.DbException;
 import simpledb.common.DeadlockException;
+import simpledb.common.DbFile;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
 
@@ -33,13 +34,20 @@ public class BufferPool {
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
 
+    private int numPages;
+    private Hashmap<int, PageId> pages;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
      * @param numPages maximum number of pages in this buffer pool.
      */
     public BufferPool(int numPages) {
-        // some code goes here
+        this.numPages = numPages;
+        this.pages = new Hashmap<>();
+
+        for (int i = 0; i < numPages; i++){
+            pages.put(i, NULL);
+        }
     }
     
     public static int getPageSize() {
@@ -71,10 +79,34 @@ public class BufferPool {
      * @param pid the ID of the requested page
      * @param perm the requested permissions on the page
      */
-    public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
+    public static Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
-        // some code goes here
-        return null;
+        
+        //Get Page
+        Page retrievedPage = DBFile.readPage(pid);
+        //Check Lock
+        if (holdsLock(tid, pid)){
+            throw new TransactionAbortedException();
+        }
+
+        for(PageId page: pages){
+            if (pid == page){
+                //Return if found in BufferPool
+                return retrievedPage;
+            } else {
+                //Find the first empty slot in the BufferPool and insert 
+                for(int pind: pages.keySet()){
+                    if (pages.get(pind) == NULL){
+                        pages.put(pind, retrievedPage);
+                        return retrievedPage;
+                    }
+                }
+
+                //If BufferPool is full, throw exception for now
+                throw new DbException();
+            }
+        }
+
     }
 
     /**
