@@ -4,12 +4,14 @@ import simpledb.common.Database;
 import simpledb.common.Permissions;
 import simpledb.common.DbException;
 import simpledb.common.DeadlockException;
+import simpledb.storage.DbFile;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
 
 import java.io.*;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -33,13 +35,16 @@ public class BufferPool {
     constructor instead. */
     public static final int DEFAULT_PAGES = 50;
 
+    private int numPages;
+    private HashMap<PageId, Page> pages = new HashMap<PageId, Page>();
+
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
      * @param numPages maximum number of pages in this buffer pool.
      */
     public BufferPool(int numPages) {
-        // some code goes here
+        this.numPages = numPages;
     }
     
     public static int getPageSize() {
@@ -71,10 +76,31 @@ public class BufferPool {
      * @param pid the ID of the requested page
      * @param perm the requested permissions on the page
      */
-    public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
-        throws TransactionAbortedException, DbException {
-        // some code goes here
-        return null;
+    public Page getPage(TransactionId tid, PageId pid, Permissions perm)
+throws TransactionAbortedException, DbException {
+        
+        //Check if page is cached in buffer pool
+        if (pages.containsKey(pid)) {
+            return pages.get(pid);
+        }
+        
+        DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
+        
+        //Get Page
+        Page retrievedPage = dbFile.readPage(pid);
+        //Check Lock
+        if (holdsLock(tid, pid)){
+            throw new TransactionAbortedException();
+        }
+
+        if (pages.size() < numPages) {
+            pages.put(pid, retrievedPage);
+            return retrievedPage;
+        } else {
+            // Buffer pool full, evict or throw (not implemented yet)
+            throw new DbException("buffer pool full");
+        }
+
     }
 
     /**
