@@ -101,25 +101,6 @@ throws TransactionAbortedException, DbException {
             throw new DbException("buffer pool full");
         }
 
-        /*
-        for(PageId pageId: pages.keySet()){
-            if (pid.equals(pageId)){
-                //Return if found in BufferPool
-                return retrievedPage;
-            } else {
-                //Find the first empty slot in the BufferPool and insert
-                if(pages.size() < numPages){
-                    pages.put(pageId, retrievedPage);
-                    return retrievedPage;
-                }
-
-                //If BufferPool is full, throw exception for now
-                throw new DbException("buffer pool full");
-            }
-        }
-        return null;
-        */
-
     }
 
     /**

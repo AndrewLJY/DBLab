@@ -303,12 +303,10 @@ public class HeapPage implements Page {
         // some code goes here
         //Get index of byte in header
         int byteInd = i/8;
-        // Get position of bit within byte
         int bitPos = i % 8;
-        // create byte within position
         int bitMask = 1 << bitPos;
         
-        //Compare both bytes and if header byte is 00000000 -> will output 0
+        //Compare both bytes and if either byte is 00000000 -> will output 0
         return (header[byteInd] & bitMask) != 0;
     }
 
