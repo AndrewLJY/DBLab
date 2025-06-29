@@ -8,6 +8,7 @@ import simpledb.transaction.TransactionId;
 
 import java.util.*;
 import java.io.*;
+import java.lang.Math;
 
 /**
  * Each instance of HeapPage stores data for one page of HeapFiles and 
@@ -73,19 +74,16 @@ public class HeapPage implements Page {
     */
     private int getNumTuples() {        
         // some code goes here
-        return 0;
-
+        return (int) Math.floor((BufferPool.getPageSize()*8) / (td.getSize() * 8 + 1));
     }
 
     /**
      * Computes the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      * @return the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      */
-    private int getHeaderSize() {        
-        
+    private int getHeaderSize() {              
         // some code goes here
-        return 0;
-                 
+        return (int) Math.ceil(numSlots / 8.0);   
     }
     
     /** Return a view of this page before it was modified
@@ -117,8 +115,8 @@ public class HeapPage implements Page {
      * @return the PageId associated with this page.
      */
     public HeapPageId getId() {
-    // some code goes here
-    throw new UnsupportedOperationException("implement this");
+        // some code goes here
+        return this.pid;
     }
 
     /**
@@ -288,7 +286,14 @@ public class HeapPage implements Page {
      */
     public int getNumEmptySlots() {
         // some code goes here
-        return 0;
+        int numEmptySlots = 0;
+        for (int j = 0; j < this.numSlots; j++){
+            if (!this.isSlotUsed(j)){
+                numEmptySlots += 1;
+            }
+        }
+
+        return numEmptySlots;
     }
 
     /**
@@ -296,7 +301,13 @@ public class HeapPage implements Page {
      */
     public boolean isSlotUsed(int i) {
         // some code goes here
-        return false;
+        //Get index of byte in header
+        int byteInd = i/8;
+        int bitPos = i % 8;
+        int bitMask = 1 << bitPos;
+        
+        //Compare both bytes and if either byte is 00000000 -> will output 0
+        return (header[byteInd] & bitMask) != 0;
     }
 
     /**
@@ -312,8 +323,16 @@ public class HeapPage implements Page {
      * (note that this iterator shouldn't return tuples in empty slots!)
      */
     public Iterator<Tuple> iterator() {
-        // some code goes here
-        return null;
+        ArrayList<Tuple> newList = new ArrayList<>();
+
+        for (Tuple tup: tuples){
+            if(tup != null){
+                newList.add(tup);
+            }
+        }
+
+        Iterable<Tuple> iterableTuple = newList;
+        return iterableTuple.iterator();
     }
 
 }

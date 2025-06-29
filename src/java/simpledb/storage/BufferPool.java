@@ -4,13 +4,14 @@ import simpledb.common.Database;
 import simpledb.common.Permissions;
 import simpledb.common.DbException;
 import simpledb.common.DeadlockException;
-import simpledb.common.DbFile;
+import simpledb.storage.DbFile;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
 
 import java.io.*;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -35,7 +36,8 @@ public class BufferPool {
     public static final int DEFAULT_PAGES = 50;
 
     private int numPages;
-    private Hashmap<int, PageId> pages;
+    private HashMap<PageId, Page> pages = new HashMap<PageId, Page>();
+
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -43,11 +45,6 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         this.numPages = numPages;
-        this.pages = new Hashmap<>();
-
-        for (int i = 0; i < numPages; i++){
-            pages.put(i, NULL);
-        }
     }
     
     public static int getPageSize() {
@@ -79,32 +76,29 @@ public class BufferPool {
      * @param pid the ID of the requested page
      * @param perm the requested permissions on the page
      */
-    public static Page getPage(TransactionId tid, PageId pid, Permissions perm)
-        throws TransactionAbortedException, DbException {
+    public Page getPage(TransactionId tid, PageId pid, Permissions perm)
+throws TransactionAbortedException, DbException {
+        
+        //Check if page is cached in buffer pool
+        if (pages.containsKey(pid)) {
+            return pages.get(pid);
+        }
+        
+        DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
         
         //Get Page
-        Page retrievedPage = DBFile.readPage(pid);
+        Page retrievedPage = dbFile.readPage(pid);
         //Check Lock
         if (holdsLock(tid, pid)){
             throw new TransactionAbortedException();
         }
 
-        for(PageId page: pages){
-            if (pid == page){
-                //Return if found in BufferPool
-                return retrievedPage;
-            } else {
-                //Find the first empty slot in the BufferPool and insert 
-                for(int pind: pages.keySet()){
-                    if (pages.get(pind) == NULL){
-                        pages.put(pind, retrievedPage);
-                        return retrievedPage;
-                    }
-                }
-
-                //If BufferPool is full, throw exception for now
-                throw new DbException();
-            }
+        if (pages.size() < numPages) {
+            pages.put(pid, retrievedPage);
+            return retrievedPage;
+        } else {
+            // Buffer pool full, evict or throw (not implemented yet)
+            throw new DbException("buffer pool full");
         }
 
     }
