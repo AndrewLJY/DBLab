@@ -77,8 +77,13 @@ public class BufferPool {
      * @param perm the requested permissions on the page
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
-        throws TransactionAbortedException, DbException {
-
+throws TransactionAbortedException, DbException {
+        
+        //Check if page is cached in buffer pool
+        if (pages.containsKey(pid)) {
+            return pages.get(pid);
+        }
+        
         DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
         
         //Get Page
@@ -88,23 +93,13 @@ public class BufferPool {
             throw new TransactionAbortedException();
         }
 
-        for(PageId pageId: pages.keySet()){
-            if (pid == pageId){
-                //Return if found in BufferPool
-                return retrievedPage;
-            } else {
-                //Find the first empty slot in the BufferPool and insert
-                if(pages.size() < numPages){
-                    pages.put(pageId, retrievedPage);
-                    return retrievedPage;
-                }
-
-                //If BufferPool is full, throw exception for now
-                throw new DbException("buffer pool full");
-            }
+        if (pages.size() < numPages) {
+            pages.put(pid, retrievedPage);
+            return retrievedPage;
+        } else {
+            // Buffer pool full, evict or throw (not implemented yet)
+            throw new DbException("buffer pool full");
         }
-
-        return null;
 
     }
 
