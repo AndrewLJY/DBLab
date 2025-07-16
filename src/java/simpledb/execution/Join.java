@@ -4,6 +4,8 @@ import simpledb.transaction.TransactionAbortedException;
 import simpledb.common.DbException;
 import simpledb.storage.Tuple;
 import simpledb.storage.TupleDesc;
+import simpledb.execution.OpIterator;
+
 
 import java.util.*;
 
@@ -13,6 +15,14 @@ import java.util.*;
 public class Join extends Operator {
 
     private static final long serialVersionUID = 1L;
+
+    private JoinPredicate jp;
+
+    private OpIterator child1;
+
+    private OpIterator child2;
+
+    private HashMap<String, Boolean> alrdIn;
 
     /**
      * Constructor. Accepts two children to join and the predicate to join them
@@ -27,11 +37,17 @@ public class Join extends Operator {
      */
     public Join(JoinPredicate p, OpIterator child1, OpIterator child2) {
         // some code goes here
+        this.jp = p;
+        this.child1 = child1;
+        this.child2 = child2;
+        if(this.jp.getOperator() != Predicate.Op.EQUALS){
+            this.alrdIn = new HashMap<String, Boolean>();
+        }
     }
 
     public JoinPredicate getJoinPredicate() {
         // some code goes here
-        return null;
+        return this.jp;
     }
 
     /**
@@ -41,7 +57,7 @@ public class Join extends Operator {
      * */
     public String getJoinField1Name() {
         // some code goes here
-        return null;
+        return Integer.toString(this.jp.getField1());
     }
 
     /**
@@ -51,7 +67,7 @@ public class Join extends Operator {
      * */
     public String getJoinField2Name() {
         // some code goes here
-        return null;
+        return Integer.toString(this.jp.getField2());
     }
 
     /**
@@ -60,20 +76,32 @@ public class Join extends Operator {
      */
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        TupleDesc tupleDesc1 = this.child1.getTupleDesc();
+        TupleDesc tupleDesc2 = this.child2.getTupleDesc();
+        TupleDesc mergeTupleDesc = TupleDesc.merge(tupleDesc1, tupleDesc2);
+        return mergeTupleDesc;
     }
 
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         // some code goes here
+        this.child1.open();
+        this.child2.open();
+        super.open();
     }
 
     public void close() {
         // some code goes here
+        super.close();
+        this.child1.close();
+        this.child2.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
+        this.child1.rewind();
+        this.child2.rewind();
+
     }
 
     /**
@@ -96,6 +124,40 @@ public class Join extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
+        if(!this.child1.hasNext() || !this.child2.hasNext()) return null;
+        while(this.child1.hasNext()){
+            Tuple outerT = this.child1.next();
+            while(this.child2.hasNext()){
+                Tuple innerT = this.child2.next();
+                if(this.jp.filter(outerT, innerT)){
+                    TupleDesc outerTD = outerT.getTupleDesc();
+                    TupleDesc innerTD = innerT.getTupleDesc();
+                    TupleDesc mergedTD = TupleDesc.merge(outerTD, innerTD);
+                    Tuple resultT = new Tuple(mergedTD);
+
+                    int fieldCount1 = outerTD.numFields();
+                    int fieldCount2 = innerTD.numFields();
+
+                    for(int x=0; x<fieldCount1; x++){
+                        resultT.setField(x, outerT.getField(x));
+                    }
+                    for(int x=fieldCount1; x< fieldCount1+fieldCount2; x++){
+                        resultT.setField(x, innerT.getField(x-fieldCount1));
+                    }
+
+                    if(this.jp.getOperator() != Predicate.Op.EQUALS){
+                        if(!this.alrdIn.containsKey(resultT.toString())){
+                            this.alrdIn.put(resultT.toString(), true);
+                        }else{
+                            continue;
+                        }
+                    }
+
+                    return resultT;
+                }
+            }
+            this.child2.rewind();
+        }
         return null;
     }
 
