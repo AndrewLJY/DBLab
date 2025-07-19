@@ -50,7 +50,7 @@ public class Aggregate extends Operator {
         this.gfield = gfield;
         this.aop = aop;
   
-        Type gType = (gfield == -1) ? null : child.getTupleDesc().getFieldType(this.gfield);
+        Type gType = (gfield == Aggregator.NO_GROUPING) ? null : child.getTupleDesc().getFieldType(gfield);
         Type aType = child.getTupleDesc().getFieldType(afield);
 
         if (aType == Type.INT_TYPE){
@@ -106,7 +106,6 @@ public class Aggregate extends Operator {
      */
     public String aggregateFieldName() {
         // some code goes here
-
         return this.child.getTupleDesc().getFieldName(this.afield);   
     }
 
@@ -133,7 +132,6 @@ public class Aggregate extends Operator {
             agg.mergeTupleIntoGroup(t);
         }
         aggIterator = agg.iterator();
- 
         aggIterator.open();
     }
 
@@ -194,8 +192,6 @@ public class Aggregate extends Operator {
     @Override
     public OpIterator[] getChildren() {
         // some code goes here
-    
-
         OpIterator[] result = new OpIterator[]{this.child};
         return result;
     }
@@ -203,7 +199,6 @@ public class Aggregate extends Operator {
     @Override
     public void setChildren(OpIterator[] children) {
         // some code goes here
-
         this.child = children[0];
     }
 
