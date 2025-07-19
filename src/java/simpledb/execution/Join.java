@@ -22,7 +22,9 @@ public class Join extends Operator {
 
     private OpIterator child2;
 
-    private HashMap<String, Boolean> alrdIn;
+    private HashMap<String, Boolean> alrdInNotEquals;
+
+    private HashMap<String, Boolean> alrdInEquals;
 
     /**
      * Constructor. Accepts two children to join and the predicate to join them
@@ -41,7 +43,9 @@ public class Join extends Operator {
         this.child1 = child1;
         this.child2 = child2;
         if(this.jp.getOperator() != Predicate.Op.EQUALS){
-            this.alrdIn = new HashMap<String, Boolean>();
+            this.alrdInNotEquals = new HashMap<String, Boolean>();
+        }else{
+            this.alrdInEquals = new HashMap<String, Boolean>();
         }
     }
 
@@ -101,6 +105,9 @@ public class Join extends Operator {
         // some code goes here
         this.child1.rewind();
         this.child2.rewind();
+        if(this.jp.getOperator() == Predicate.Op.EQUALS){
+            this.alrdInEquals.clear();
+        }
 
     }
 
@@ -146,8 +153,19 @@ public class Join extends Operator {
                     }
 
                     if(this.jp.getOperator() != Predicate.Op.EQUALS){
-                        if(!this.alrdIn.containsKey(resultT.toString())){
-                            this.alrdIn.put(resultT.toString(), true);
+                        if(!this.alrdInNotEquals.containsKey(resultT.toString())){
+                            this.alrdInNotEquals.put(resultT.toString(), true);
+                        }else{
+                            continue;
+                        }
+                    }else{
+                        if(!this.alrdInEquals.containsKey(resultT.toString())){
+                            this.alrdInEquals.put(resultT.toString(), true);
+                            if(this.child2.hasNext()){
+                                this.child1.rewind();
+                            }else{
+                                this.child2.rewind();
+                            }
                         }else{
                             continue;
                         }
@@ -157,6 +175,7 @@ public class Join extends Operator {
                 }
             }
             this.child2.rewind();
+            
         }
         return null;
     }
@@ -164,12 +183,14 @@ public class Join extends Operator {
     @Override
     public OpIterator[] getChildren() {
         // some code goes here
-        return null;
+        return new OpIterator[]{this.child1, this.child2};
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
         // some code goes here
+        this.child1 = children[0];
+        this.child2 = children[1];
     }
 
 }
