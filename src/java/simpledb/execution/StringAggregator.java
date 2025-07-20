@@ -2,6 +2,15 @@ package simpledb.execution;
 
 import simpledb.common.Type;
 import simpledb.storage.Tuple;
+import simpledb.storage.TupleDesc;
+import simpledb.storage.TupleIterator;
+import simpledb.storage.StringField;
+import java.util.*;
+import simpledb.storage.Field;
+import simpledb.storage.StringField;
+import simpledb.storage.IntField;
+
+
 
 /**
  * Knows how to compute some aggregate over a set of StringFields.
@@ -9,7 +18,11 @@ import simpledb.storage.Tuple;
 public class StringAggregator implements Aggregator {
 
     private static final long serialVersionUID = 1L;
-
+    private int gbfield;
+    private Type gbfieldtype;
+    private int afield;
+    private Op what;
+        private HashMap<Field, Integer> tempAgg;
     /**
      * Aggregate constructor
      * @param gbfield the 0-based index of the group-by field in the tuple, or NO_GROUPING if there is no grouping
@@ -21,6 +34,11 @@ public class StringAggregator implements Aggregator {
 
     public StringAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
         // some code goes here
+        this.gbfield = gbfield;
+        this.gbfieldtype = gbfieldtype;
+        this.afield = afield;
+        this.what = what;
+        this.tempAgg = new HashMap<Field, Integer>();
     }
 
     /**
@@ -29,6 +47,20 @@ public class StringAggregator implements Aggregator {
      */
     public void mergeTupleIntoGroup(Tuple tup) {
         // some code goes here
+        Field gbfieldVal;
+        if (this.gbfield != Aggregator.NO_GROUPING) {
+            gbfieldVal = tup.getField(this.gbfield);
+        } else {
+            gbfieldVal = null;
+        }
+
+        String afieldVal = ((StringField) tup.getField(this.afield)).getValue();
+
+        if (!tempAgg.containsKey(gbfieldVal)) {
+            tempAgg.put(gbfieldVal, 0);
+        }
+
+        tempAgg.put(gbfieldVal, tempAgg.get(gbfieldVal) + 1);
     }
 
     /**
@@ -41,7 +73,26 @@ public class StringAggregator implements Aggregator {
      */
     public OpIterator iterator() {
         // some code goes here
-        throw new UnsupportedOperationException("please implement me for lab2");
+        TupleDesc temp;
+        List<Tuple> result = new ArrayList<>();
+        if(this.gbfield != Aggregator.NO_GROUPING){
+            temp = new TupleDesc(new Type[]{this.gbfieldtype,Type.INT_TYPE});
+        } else {
+            temp = new TupleDesc(new Type[]{Type.INT_TYPE});
+        } 
+
+        for(HashMap.Entry<Field, Integer> val: tempAgg.entrySet()){
+            Tuple t = new Tuple(temp);
+            if(this.gbfield == Aggregator.NO_GROUPING){
+                t.setField(0, new IntField(val.getValue()));
+            } else {
+                t.setField(0, val.getKey());
+                t.setField(1, new IntField(val.getValue()));
+            }
+            result.add(t);
+        }
+
+        return new TupleIterator(temp, result);
     }
 
 }
