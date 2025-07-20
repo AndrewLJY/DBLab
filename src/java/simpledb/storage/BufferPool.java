@@ -36,7 +36,7 @@ public class BufferPool {
     public static final int DEFAULT_PAGES = 50;
 
     private int numPages;
-    private HashMap<PageId, Page> pages = new HashMap<PageId, Page>();
+    private LinkedHashMap<PageId, Page> pages;
 
     /**
      * Creates a BufferPool that caches up to numPages pages.
@@ -45,6 +45,7 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         this.numPages = numPages;
+        this.pages = new LinkedHashMap<PageId, Page>(numPages, 0.75f, true);
     }
     
     public static int getPageSize() {
@@ -98,7 +99,10 @@ throws TransactionAbortedException, DbException {
             return retrievedPage;
         } else {
             // Buffer pool full, evict or throw (not implemented yet)
-            throw new DbException("buffer pool full");
+            //throw new DbException("buffer pool full");
+            evictPage();
+            pages.put(pid, retrievedPage);
+            return retrievedPage;
         }
 
     }
@@ -165,6 +169,15 @@ throws TransactionAbortedException, DbException {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        DbFile dbFile = Database.getCatalog().getDatabaseFile(tableId);
+
+        // Insert & get list of dirty pages
+        List<Page> dirtyPages = dbFile.insertTuple(tid, t);
+
+        for (Page eachPage : dirtyPages) {
+            eachPage.markDirty(true, tid);
+            pages.put(eachPage.getId(), eachPage); // cache
+        }
     }
 
     /**
@@ -180,11 +193,21 @@ throws TransactionAbortedException, DbException {
      * @param tid the transaction deleting the tuple.
      * @param t the tuple to delete
      */
-    public  void deleteTuple(TransactionId tid, Tuple t)
-        throws DbException, IOException, TransactionAbortedException {
-        // some code goes here
-        // not necessary for lab1
+    public void deleteTuple(TransactionId tid, Tuple t)
+            throws DbException, IOException, TransactionAbortedException {
+
+        int tableId = t.getRecordId().getPageId().getTableId();
+        DbFile dbFile = Database.getCatalog().getDatabaseFile(tableId);
+
+        // Delete & get list of dirty pages
+        List<Page> dirtyPages = dbFile.deleteTuple(tid, t);
+
+        for (Page eachPage : dirtyPages) {
+            eachPage.markDirty(true, tid);
+            pages.put(eachPage.getId(), eachPage); // cache
+        }
     }
+
 
     /**
      * Flush all dirty pages to disk.
@@ -192,10 +215,12 @@ throws TransactionAbortedException, DbException {
      *     break simpledb if running in NO STEAL mode.
      */
     public synchronized void flushAllPages() throws IOException {
-        // some code goes here
-        // not necessary for lab1
-
+        List<PageId> pageIds = new ArrayList<>(pages.keySet());
+        for (PageId eachPid : pageIds) {
+            flushPage(eachPid);
+        }
     }
+
 
     /** Remove the specific page id from the buffer pool.
         Needed by the recovery manager to ensure that the
@@ -206,8 +231,7 @@ throws TransactionAbortedException, DbException {
         are removed from the cache so they can be reused safely
     */
     public synchronized void discardPage(PageId pid) {
-        // some code goes here
-        // not necessary for lab1
+        pages.remove(pid);
     }
 
     /**
@@ -215,8 +239,12 @@ throws TransactionAbortedException, DbException {
      * @param pid an ID indicating the page to flush
      */
     private synchronized  void flushPage(PageId pid) throws IOException {
-        // some code goes here
-        // not necessary for lab1
+        Page page = pages.get(pid);
+        if (page != null && page.isDirty() != null) {
+            DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
+            file.writePage(page);
+            page.markDirty(false, null);
+        }
     }
 
     /** Write all pages of the specified transaction to disk.
@@ -231,8 +259,23 @@ throws TransactionAbortedException, DbException {
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
     private synchronized  void evictPage() throws DbException {
-        // some code goes here
-        // not necessary for lab1
+        Set<Map.Entry<PageId, Page>> entrySet = pages.entrySet();
+        for (Map.Entry<PageId, Page> eachEntry : entrySet) {
+
+            PageId pid = eachEntry.getKey();
+            Page page = eachEntry.getValue();
+
+            if (page.isDirty() == null) {
+                try {
+                    flushPage(pid);
+                } catch (IOException err) {
+                    throw new DbException("Unable to flush page:" + err.getMessage());
+                }
+                pages.remove(pid);
+                return;
+            }
+        }
+        throw new DbException("All pages are dirty, unable to evict.");
     }
 
 }
