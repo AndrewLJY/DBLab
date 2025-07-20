@@ -105,6 +105,12 @@ public class HeapFile implements DbFile {
         }
     }
 
+    private void writePageData(HeapPage page, long offset) throws IOException {
+        try (RandomAccessFile raf = new RandomAccessFile(f, "rw")) {
+            raf.seek(offset);
+            raf.write(page.getPageData());
+        }
+    }
 
     // see DbFile.java for javadocs
     public void writePage(Page page) throws IOException {
@@ -116,15 +122,10 @@ public class HeapFile implements DbFile {
 
         int pageSize = BufferPool.getPageSize();
         int pageNo = page.getId().getPageNumber();
-        byte[] data = page.getPageData();
 
-        try (RandomAccessFile raf = new RandomAccessFile(f, "rw")) {
-            raf.seek((long) pageNo * pageSize);
-            raf.write(data);
-        }
+        long offset = (long) pageNo * pageSize;
+        writePageData((HeapPage) page, offset);
     }
-
-
 
     /**
      * Returns the number of pages in this HeapFile.
@@ -161,11 +162,8 @@ public class HeapFile implements DbFile {
 
         newPage.insertTuple(t);
 
-        // Append
-        try (RandomAccessFile raf = new RandomAccessFile(f, "rw")) {
-            raf.seek(raf.length());
-            raf.write(newPage.getPageData());
-        }
+        long offset = f.length();
+        writePageData(newPage, offset);
 
         modifiedPages.add(newPage);
         return modifiedPages;
