@@ -105,11 +105,26 @@ public class HeapFile implements DbFile {
         }
     }
 
+    private void writePageData(HeapPage page, long offset) throws IOException {
+        try (RandomAccessFile raf = new RandomAccessFile(f, "rw")) {
+            raf.seek(offset);
+            raf.write(page.getPageData());
+        }
+    }
 
     // see DbFile.java for javadocs
     public void writePage(Page page) throws IOException {
         // some code goes here
         // not necessary for lab1
+        if (!(page.getId() instanceof HeapPageId)) {
+            throw new IllegalArgumentException("Invalid page type");
+        }
+
+        int pageSize = BufferPool.getPageSize();
+        int pageNo = page.getId().getPageNumber();
+
+        long offset = (long) pageNo * pageSize;
+        writePageData((HeapPage) page, offset);
     }
 
     /**
@@ -124,16 +139,53 @@ public class HeapFile implements DbFile {
     public List<Page> insertTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
         // some code goes here
-        return null;
         // not necessary for lab1
+        List<Page> modifiedPages = new ArrayList<>();
+
+        // Find space to insert
+
+        for (int i = 0; i < numPages(); i++) {
+            HeapPageId pid = new HeapPageId(getId(), i);
+            HeapPage page = (HeapPage) Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
+
+            if (page.getNumEmptySlots() > 0) {
+                page.insertTuple(t);
+                modifiedPages.add(page);
+                return modifiedPages;
+            }
+        }
+
+        // No space found
+        HeapPageId newPid = new HeapPageId(getId(), numPages());
+        byte[] emptyData = HeapPage.createEmptyPageData();
+        HeapPage newPage = new HeapPage(newPid, emptyData);
+
+        newPage.insertTuple(t);
+
+        long offset = f.length();
+        writePageData(newPage, offset);
+
+        modifiedPages.add(newPage);
+        return modifiedPages;
     }
 
     // see DbFile.java for javadocs
     public ArrayList<Page> deleteTuple(TransactionId tid, Tuple t) throws DbException,
             TransactionAbortedException {
         // some code goes here
-        return null;
-        // not necessary for lab1
+        RecordId rid = t.getRecordId();
+        if (rid == null) {
+            throw new DbException("Tuple has no record id");
+        }
+
+        PageId pid = rid.getPageId();
+        HeapPage page = (HeapPage) Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
+
+        page.deleteTuple(t);
+
+        ArrayList<Page> modified = new ArrayList<>();
+        modified.add(page);
+        return modified;
     }
 
     public DbFileIterator iterator(TransactionId tid) {
@@ -179,54 +231,4 @@ public class HeapFile implements DbFile {
 
         };
     }
-
-    /*
-    public DbFileIterator iterator(final TransactionId tid) {
-        // some code goes here
-        return new DbFileIterator() {
-            private int pageIndex = 0;
-            private Iterator<Tuple> tupleIterator = null;
-
-            public void open() throws DbException, TransactionAbortedException {
-                pageIndex = 0;
-                tupleIterator = getTupleIterator(pageIndex);
-            }
-
-            private Iterator<Tuple> getTupleIterator(int pageNo) throws DbException, TransactionAbortedException {
-                if (pageNo >= numPages()) return null;
-
-                HeapPageId pid = new HeapPageId(getId(), pageNo);
-                HeapPage page = (HeapPage) Database.getBufferPool().getPage(tid, pid, Permissions.READ_ONLY);
-                return page.iterator();
-            }
-
-            public boolean hasNext() throws DbException, TransactionAbortedException {
-                if (tupleIterator == null) return false;
-
-                while (!tupleIterator.hasNext() && pageIndex < numPages() - 1) {
-                    pageIndex++;
-                    tupleIterator = getTupleIterator(pageIndex);
-                }
-                return tupleIterator != null && tupleIterator.hasNext();
-            }
-
-            public Tuple next() throws DbException, TransactionAbortedException, NoSuchElementException {
-                if (!hasNext()) throw new NoSuchElementException();
-                return tupleIterator.next();
-            }
-
-            public void rewind() throws DbException, TransactionAbortedException {
-                close();
-                open();
-            }
-
-            public void close() {
-                tupleIterator = null;
-            }
-        };
-    }
-
-    */
-
 }
-
