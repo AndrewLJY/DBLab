@@ -26,3 +26,5 @@ replay_pid*
 src/.DS_Store
 src/java/.DS_Store
 src/java/simpledb/.DS_Store
+
+bin/
