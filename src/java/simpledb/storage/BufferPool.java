@@ -38,6 +38,9 @@ public class BufferPool {
     private int numPages;
     private LinkedHashMap<PageId, Page> pages;
 
+    private final LockManager lockManager = new LockManager();
+    private LockManager.LockType lockType;
+
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -80,6 +83,14 @@ public class BufferPool {
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
 throws TransactionAbortedException, DbException {
         
+        if (perm == Permissions.READ_ONLY) {
+            lockType = LockManager.LockType.SHARED;
+        } else {
+            lockType = LockManager.LockType.EXCLUSIVE;
+        }
+
+        lockManager.acquireLock(tid, pid, lockType);
+
         //Check if page is cached in buffer pool
         if (pages.containsKey(pid)) {
             return pages.get(pid);
@@ -89,10 +100,6 @@ throws TransactionAbortedException, DbException {
         
         //Get Page
         Page retrievedPage = dbFile.readPage(pid);
-        //Check Lock
-        if (holdsLock(tid, pid)){
-            throw new TransactionAbortedException();
-        }
 
         if (pages.size() < numPages) {
             pages.put(pid, retrievedPage);
@@ -119,6 +126,7 @@ throws TransactionAbortedException, DbException {
     public  void unsafeReleasePage(TransactionId tid, PageId pid) {
         // some code goes here
         // not necessary for lab1|lab2
+        lockManager.releaseLock(tid,pid);
     }
 
     /**
@@ -129,13 +137,14 @@ throws TransactionAbortedException, DbException {
     public void transactionComplete(TransactionId tid) {
         // some code goes here
         // not necessary for lab1|lab2
+        lockManager.releaseAllLocks(tid);
     }
 
     /** Return true if the specified transaction has a lock on the specified page */
     public boolean holdsLock(TransactionId tid, PageId p) {
         // some code goes here
         // not necessary for lab1|lab2
-        return false;
+        return lockManager.holdsLock(tid, p);
     }
 
     /**
