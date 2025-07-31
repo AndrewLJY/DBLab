@@ -28,3 +28,4 @@ src/java/.DS_Store
 src/java/simpledb/.DS_Store
 
 bin/
+bin/depcache/dependencies.txt
