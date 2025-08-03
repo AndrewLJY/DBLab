@@ -67,9 +67,6 @@ public class LockManager {
     public synchronized void acquireLock(TransactionId tid, PageId pid, LockType type)
             throws simpledb.transaction.TransactionAbortedException {
 
-        long startTime = System.currentTimeMillis();
-        long timeoutDur = 5000;
-
         while (true) {
             Lock currLock = lockMap.get(pid);
 
@@ -107,16 +104,12 @@ public class LockManager {
 
             addWaitForEdges(tid, currLock.currHolders);
 
+            // Deadlock prevention
             if (detectCycle()) {
                 removeWaitEdgesFrom(tid);
                 throw new simpledb.transaction.TransactionAbortedException(); // abort if deadlock detected
             }
-
-            // Deadlock prevention
             try {
-                // if (System.currentTimeMillis() - startTime > timeoutDur) {
-                // throw new simpledb.transaction.TransactionAbortedException();
-                // }
                 wait(100);
 
             } catch (InterruptedException e) {
@@ -127,20 +120,28 @@ public class LockManager {
 
     private void addWaitForEdges(TransactionId waiter, Set<TransactionId> holders) {
         Set<TransactionId> edges = waitForGraph.computeIfAbsent(waiter, k -> new HashSet<>());
-        edges.addAll(holders);
+
+        // Prevent adding an edge to itself
+        for (TransactionId holder : holders) {
+            if (!holder.equals(waiter)) {
+                edges.add(holder);
+            }
+        }
     }
 
+    /* Remove all edges from tid */
     private void removeWaitEdgesFrom(TransactionId tid) {
         waitForGraph.remove(tid);
     }
 
+    /* Remove all edges that point to tid */
     private void removeWaitEdgesPointingTo(TransactionId tid) {
         for (Set<TransactionId> edges : waitForGraph.values()) {
             edges.remove(tid);
         }
     }
 
-    /** DFS cycle detection */
+    /* DFS cycle detection */
     private boolean detectCycle() {
         Set<TransactionId> visited = new HashSet<>();
         Set<TransactionId> stack = new HashSet<>();
