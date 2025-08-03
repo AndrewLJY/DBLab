@@ -104,7 +104,7 @@ public class LockManager {
 
             addWaitForEdges(tid, currLock.currHolders);
 
-            // Deadlock prevention
+            // Deadlock Detection
             if (detectCycle()) {
                 removeWaitEdgesFrom(tid);
                 throw new simpledb.transaction.TransactionAbortedException(); // abort if deadlock detected
