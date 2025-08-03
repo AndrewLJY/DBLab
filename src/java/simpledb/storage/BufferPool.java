@@ -288,6 +288,14 @@ public class BufferPool {
     public synchronized void flushPages(TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
+        for (Map.Entry<PageId, Page> eachEntry : pages.entrySet()) {
+            PageId pid = eachEntry.getKey();
+            Page page = eachEntry.getValue();
+
+            if (page.isDirty() != null && page.isDirty().equals(tid)) {
+                flushPage(pid);
+            }
+        }
     }
 
     /**

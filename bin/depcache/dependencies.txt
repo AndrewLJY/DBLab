@@ -1342,9 +1342,7 @@ java.lang.invoke.StringConcatFactory
 simpledb.execution.SeqScan
 simpledb.execution.JoinPredicate
 ||:simpledb.index.BTreeUtility$BTreeInserter
-java.io.PrintStream
 java.lang.Throwable
-java.lang.System
 simpledb.storage.Tuple
 simpledb.index.BTreeUtility
 java.util.concurrent.BlockingQueue
@@ -1812,9 +1810,7 @@ simpledb.systemtest.AggregateTest
 simpledb.transaction.TransactionAbortedException
 ||:simpledb.index.BTreeUtility$BTreeReader
 simpledb.index.BTreeUtility$BTreeReader
-java.io.PrintStream
 java.lang.Throwable
-java.lang.System
 simpledb.index.BTreeUtility
 simpledb.storage.DbFileIterator
 java.lang.Exception
@@ -1887,6 +1883,7 @@ java.lang.invoke.LambdaMetafactory
 java.lang.invoke.MethodHandles$Lookup
 java.util.Iterator
 java.lang.System
+java.util.Collection
 java.lang.invoke.MethodHandles
 simpledb.storage.LockManager
 java.util.Set
@@ -1895,14 +1892,14 @@ simpledb.storage.LockManager$LockType
 java.util.HashSet
 simpledb.storage.LockManager$Lock
 java.lang.InterruptedException
+simpledb.transaction.TransactionId
 java.util.Map
 java.lang.Object
 simpledb.transaction.TransactionAbortedException
+java.util.Collections
 ||:simpledb.index.BTreeUtility$BTreeDeleter
-java.io.PrintStream
 java.lang.Throwable
 simpledb.common.DbException
-java.lang.System
 simpledb.storage.IntField
 simpledb.index.BTreeUtility
 simpledb.index.BTreeUtility$BTreeDeleter
@@ -2746,9 +2743,7 @@ java.util.NoSuchElementException
 simpledb.transaction.TransactionAbortedException
 [Lsimpledb.common.Type;
 ||:simpledb.index.BTreeUtility$BTreeWriter
-java.io.PrintStream
 java.lang.Throwable
-java.lang.System
 simpledb.storage.Tuple
 simpledb.index.BTreeUtility
 simpledb.storage.DbFileIterator
