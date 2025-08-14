@@ -12,6 +12,7 @@ import simpledb.common.Debug;
 import simpledb.storage.*;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
+import simpledb.execution.Predicate;
 
 /**
  * BTreeFile is an implementation of a DbFile that stores a B+ tree.
@@ -184,12 +185,43 @@ public class BTreeFile implements DbFile {
 	 * @return the left-most leaf page possibly containing the key field f
 	 * 
 	 */
+
 	private BTreeLeafPage findLeafPage(TransactionId tid, Map<PageId, Page> dirtypages, BTreePageId pid, Permissions perm,
                                        Field f)
 					throws DbException, TransactionAbortedException {
-		// some code goes here
-        return null;
+
+		// If current node is a leaf, return
+		if (pid.pgcateg() == BTreePageId.LEAF) {
+        	return (BTreeLeafPage) getPage(tid, dirtypages, pid, perm);
+    	}
+
+		// Current node is an internal node
+		BTreeInternalPage currPage = (BTreeInternalPage) getPage(tid, dirtypages, pid, Permissions.READ_ONLY);
+			
+		if (f == null) {
+			return findLeafPage(tid, dirtypages, currPage.getChildId(0), Permissions.READ_ONLY, f);
+		}
+
+		Iterator<BTreeEntry> intPgIterator = currPage.iterator();
+		BTreeEntry currEntry = null;
+
+		while (intPgIterator.hasNext()) {
+			currEntry = intPgIterator.next();
+			Field other = currEntry.getKey();
+			boolean result = f.compare(Predicate.Op.LESS_THAN_OR_EQ, other);
+		
+			if (result) {
+				return findLeafPage(tid, dirtypages, currEntry.getLeftChild(), Permissions.READ_ONLY, f);
+			}
+		}
+
+		if (currEntry != null) {
+			return findLeafPage(tid, dirtypages, currEntry.getRightChild(), Permissions.READ_ONLY, f);
+		} else {
+			throw new DbException("Fatal error: Internal page has no entries");
+		}
 	}
+
 	
 	/**
 	 * Convenience method to find a leaf page when there is no dirtypages HashMap.
