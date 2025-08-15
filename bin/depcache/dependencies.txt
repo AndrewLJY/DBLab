@@ -2390,6 +2390,7 @@ simpledb.transaction.TransactionId
 java.util.Map
 simpledb.common.Database
 simpledb.common.Permissions
+java.lang.Math
 simpledb.storage.PageId
 simpledb.index.BTreeFileIterator
 java.lang.invoke.MethodHandles$Lookup
@@ -2406,11 +2407,13 @@ java.lang.RuntimeException
 java.lang.IllegalArgumentException
 java.io.File
 simpledb.index.BTreeFile
+java.util.List
 simpledb.index.BTreeInternalPage
 simpledb.storage.RecordId
 java.lang.Object
 simpledb.common.Debug
 java.lang.invoke.StringConcatFactory
+java.util.Collections
 simpledb.transaction.TransactionAbortedException
 ||:simpledb.HeapFileWriteTest
 simpledb.TestUtil
