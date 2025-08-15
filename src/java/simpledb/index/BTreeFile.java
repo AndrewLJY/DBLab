@@ -3,8 +3,6 @@ package simpledb.index;
 import java.io.*;
 import java.util.*;
 
-import com.sun.jdi.Field;
-
 import simpledb.common.Database;
 import simpledb.common.Permissions;
 import simpledb.execution.IndexPredicate;
@@ -283,34 +281,52 @@ public class BTreeFile implements DbFile {
 		// some code goes here
 
 		// Create new page
-		BTreeLeafPage newPage = (BTreeLeafPage) getEmptyPage(tid, dirtypages, field);
+		BTreeLeafPage newPage = (BTreeLeafPage) getEmptyPage(tid, dirtypages, BTreePageId.LEAF);
 		int numOfTup = page.getNumTuples();
-		int halfTup = numOfTup / 2;
+		int halfTup = (int) Math.floor(numOfTup / 2);
 
 		// Move tuples from one leaf page to another
-		BTreeLeafPageReverseIterator leafPageIterator = page.reverseIterator();
-		leafPageIterator.open();
+		BTreeLeafPageReverseIterator leafPageIterator = (BTreeLeafPageReverseIterator) page.reverseIterator();
 		int count = 0;
+		ArrayList<Tuple> toMove = new ArrayList<>();
+
 		while (leafPageIterator.hasNext()) {
 			Tuple leafData = leafPageIterator.next();
-			if (!(count >= halfTup)) {
-				newPage.insertTuple(leafData);
-				page.deleteTuple(leafData);
+			if (count < halfTup) {
+				toMove.add(leafData);
 			}
 			count++;
+		}
+
+		for (Tuple t : toMove) {
+			page.deleteTuple(t);
+			newPage.insertTuple(t);
 		}
 
 		// Find parent
 		Tuple middleTuple = newPage.iterator().next();
 		Field middleKey = middleTuple.getField(this.keyField);
 		BTreeInternalPage parentPage = getParentWithEmptySlots(tid, dirtypages, page.getParentId(), middleKey);
-		parentPage.insertEntry(new BTreeEntry(firstTuple.getField(this.keyField), page, newPage));
+		parentPage.insertEntry(new BTreeEntry(middleKey, page.getId(), newPage.getId()));
+		newPage.setParentId(parentPage.getId());
 
 		// Update sibling pointers
 		newPage.setRightSiblingId(page.getRightSiblingId());
-		page.setRightSiblingId(newPage.getId());
+		if (page.getRightSiblingId() != null) {
+			BTreeLeafPage rightLeaf = (BTreeLeafPage) getPage(tid, dirtypages, page.getRightSiblingId(),
+					Permissions.READ_WRITE);
+			rightLeaf.setLeftSiblingId(newPage.getId());
+			dirtypages.put(page.getRightSiblingId(), rightLeaf);
+		}
 		newPage.setLeftSiblingId(page.getId());
+		page.setRightSiblingId(newPage.getId());
 
+		// Update dirty pages
+		dirtypages.put(newPage.getId(), newPage);
+		dirtypages.put(page.getId(), page);
+		dirtypages.put(parentPage.getId(), parentPage);
+
+		// Pick whichever's applicable
 		if (field.compare(Op.LESS_THAN, middleKey)) {
 			return page;
 		} else {
@@ -360,7 +376,55 @@ public class BTreeFile implements DbFile {
 			BTreeInternalPage page, Field field)
 			throws DbException, IOException, TransactionAbortedException {
 		// some code goes here
-		//
+
+		BTreeInternalPage newPage = (BTreeInternalPage) getEmptyPage(tid, dirtypages, BTreePageId.INTERNAL);
+		int numE = page.getNumEntries();
+		int halfE = (int) Math.floor(numE / 2);
+
+		BTreeEntry midEnt = null;
+		// Move tuples from one leaf page to another
+		BTreeInternalPageReverseIterator internalPageIterator = (BTreeInternalPageReverseIterator) page
+				.reverseIterator();
+		int count = 0;
+		ArrayList<BTreeEntry> toMove = new ArrayList<>();
+		while (internalPageIterator.hasNext()) {
+			BTreeEntry currEntry = internalPageIterator.next();
+			if (count == halfE) {
+				midEnt = currEntry;
+			} else if (count < halfE) {
+				toMove.add(currEntry);
+			}
+			count++;
+		}
+
+		for (BTreeEntry e : toMove) {
+			page.deleteKeyAndRightChild(e);
+			newPage.insertEntry(e);
+		}
+
+		page.deleteKeyAndRightChild(midEnt);
+
+		// Update parent pointers
+		updateParentPointers(tid, dirtypages, newPage);
+
+		// Move up the middle key
+		BTreeInternalPage parentPage = getParentWithEmptySlots(tid, dirtypages, page.getParentId(),
+				midEnt.getKey());
+		parentPage.insertEntry(new BTreeEntry(midEnt.getKey(), page.getId(), newPage.getId()));
+		newPage.setParentId(parentPage.getId());
+
+		// Update dirty pages
+		dirtypages.put(newPage.getId(), newPage);
+		dirtypages.put(page.getId(), page);
+		dirtypages.put(parentPage.getId(), parentPage);
+
+		// Pick whichever's applicable
+		if (field.compare(Predicate.Op.LESS_THAN, midEnt.getKey())) {
+			return page;
+		} else {
+			return newPage;
+		}
+
 		// Split the internal page by adding a new page on the right of the existing
 		// page and moving half of the entries to the new page. Push the middle key up
 		// into the parent page, and recursively split the parent as needed to
@@ -372,7 +436,6 @@ public class BTreeFile implements DbFile {
 		// will be useful here. Return the page into which an entry with the given key
 		// field
 		// should be inserted.
-		return null;
 	}
 
 	/**

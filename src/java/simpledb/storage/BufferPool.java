@@ -107,7 +107,8 @@ public class BufferPool {
             pages.put(pid, retrievedPage);
             return retrievedPage;
         } else {
-            // Buffer pool full, evict or throw
+            // Buffer pool full, evict or throw (not implemented yet)
+            // throw new DbException("buffer pool full");
             evictPage();
             pages.put(pid, retrievedPage);
             return retrievedPage;
