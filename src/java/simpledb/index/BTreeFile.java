@@ -322,9 +322,9 @@ public class BTreeFile implements DbFile {
 		page.setRightSiblingId(newPage.getId());
 
 		// Update dirty pages
-		//dirtypages.put(newPage.getId(), newPage);
-		//dirtypages.put(page.getId(), page);
-		//dirtypages.put(parentPage.getId(), parentPage);
+		dirtypages.put(newPage.getId(), newPage);
+		dirtypages.put(page.getId(), page);
+		dirtypages.put(parentPage.getId(), parentPage);
 
 		// Pick whichever's applicable
 		if (field.compare(Op.LESS_THAN, middleKey)) {
@@ -414,9 +414,9 @@ public class BTreeFile implements DbFile {
 		newPage.setParentId(parentPage.getId());
 
 		// Update dirty pages
-		//dirtypages.put(newPage.getId(), newPage);
-		//dirtypages.put(page.getId(), page);
-		//dirtypages.put(parentPage.getId(), parentPage);
+		dirtypages.put(newPage.getId(), newPage);
+		dirtypages.put(page.getId(), page);
+		dirtypages.put(parentPage.getId(), parentPage);
 
 		// Pick whichever's applicable
 		if (field.compare(Predicate.Op.LESS_THAN, midEnt.getKey())) {
