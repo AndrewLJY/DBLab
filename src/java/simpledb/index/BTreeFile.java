@@ -1035,8 +1035,7 @@ public class BTreeFile implements DbFile {
 		// Update sibling pointers
 		leftPage.setRightSiblingId(rightPage.getRightSiblingId());
 		if (rightPage.getRightSiblingId() != null) {
-			BTreeLeafPage rightSibling = (BTreeLeafPage) Database.getBufferPool()
-					.getPage(tid, rightPage.getRightSiblingId(), Permissions.READ_WRITE);
+			BTreeLeafPage rightSibling = (BTreeLeafPage) getPage(tid, dirtypages,rightPage.getRightSiblingId(), Permissions.READ_WRITE);
 			rightSibling.setLeftSiblingId(leftPage.getId());
 		}
 
