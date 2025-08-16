@@ -286,13 +286,13 @@ public class BTreeFile implements DbFile {
 		int halfTup = (int) Math.floor(numOfTup / 2);
 
 		// Move tuples from one leaf page to another
-		BTreeLeafPageReverseIterator leafPageIterator = (BTreeLeafPageReverseIterator) page.reverseIterator();
+		BTreeLeafPageIterator leafPageIterator = (BTreeLeafPageIterator) page.iterator();
 		int count = 0;
 		ArrayList<Tuple> toMove = new ArrayList<>();
 
 		while (leafPageIterator.hasNext()) {
 			Tuple leafData = leafPageIterator.next();
-			if (count < halfTup) {
+			if (count >= halfTup) {
 				toMove.add(leafData);
 			}
 			count++;
@@ -383,15 +383,15 @@ public class BTreeFile implements DbFile {
 
 		BTreeEntry midEnt = null;
 		// Move tuples from one leaf page to another
-		BTreeInternalPageReverseIterator internalPageIterator = (BTreeInternalPageReverseIterator) page
-				.reverseIterator();
+		BTreeInternalPageIterator internalPageIterator = (BTreeInternalPageIterator) page
+				.iterator();
 		int count = 0;
 		ArrayList<BTreeEntry> toMove = new ArrayList<>();
 		while (internalPageIterator.hasNext()) {
 			BTreeEntry currEntry = internalPageIterator.next();
 			if (count == halfE) {
 				midEnt = currEntry;
-			} else if (count < halfE) {
+			} else if (count > halfE) {
 				toMove.add(currEntry);
 			}
 			count++;
