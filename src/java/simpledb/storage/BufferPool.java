@@ -160,7 +160,7 @@ public class BufferPool {
         // some code goes here
         // not necessary for lab1|lab2
 
-        Set<Map.Entry<PageId, Page>> entrySet = pages.entrySet();
+        Set<Map.Entry<PageId, Page>> entrySet = new HashSet<>(pages.entrySet()); // Make a copy first to prevent ConcurrentModificationException
         for (Map.Entry<PageId, Page> eachEntry : entrySet) {
 
             PageId pid = eachEntry.getKey();
