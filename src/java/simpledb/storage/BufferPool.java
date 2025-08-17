@@ -159,6 +159,7 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid, boolean commit) {
         // some code goes here
         // not necessary for lab1|lab2
+        LinkedHashMap<PageId, Page> toAdd = new LinkedHashMap<>();
 
         Set<Map.Entry<PageId, Page>> entrySet = new HashSet<>(pages.entrySet()); // Make a copy first to prevent ConcurrentModificationException
         for (Map.Entry<PageId, Page> eachEntry : entrySet) {
@@ -177,10 +178,14 @@ public class BufferPool {
                     DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
                     Page retrievedPage = dbFile.readPage(pid);
 
-                    pages.put(pid, retrievedPage);
+                    toAdd.put(pid, retrievedPage);
                 }
             }
 
+        }
+
+        for (Map.Entry<PageId, Page> eachAdd : toAdd.entrySet()){
+            pages.put(eachAdd.getKey(), eachAdd.getValue());
         }
         lockManager.releaseAllLocks(tid);
     }

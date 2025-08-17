@@ -205,12 +205,12 @@ public class BTreeFile implements DbFile {
 
 		// Current node is an internal node
 		BTreeInternalPage currPage = (BTreeInternalPage) getPage(tid, dirtypages, pid, Permissions.READ_ONLY);
+		Iterator<BTreeEntry> intPgIterator = currPage.iterator();
 
-		if (f == null) {
-			return findLeafPage(tid, dirtypages, currPage.getChildId(0), Permissions.READ_ONLY, f);
+		if (f == null && intPgIterator.hasNext()) {
+			return findLeafPage(tid, dirtypages, intPgIterator.next().getLeftChild(), perm, f);
 		}
 
-		Iterator<BTreeEntry> intPgIterator = currPage.iterator();
 		BTreeEntry currEntry = null;
 
 		while (intPgIterator.hasNext()) {
@@ -219,12 +219,12 @@ public class BTreeFile implements DbFile {
 			boolean result = f.compare(Predicate.Op.LESS_THAN_OR_EQ, other);
 
 			if (result) {
-				return findLeafPage(tid, dirtypages, currEntry.getLeftChild(), Permissions.READ_ONLY, f);
+				return findLeafPage(tid, dirtypages, currEntry.getLeftChild(), perm, f);
 			}
 		}
-
+		
 		if (currEntry != null) {
-			return findLeafPage(tid, dirtypages, currEntry.getRightChild(), Permissions.READ_ONLY, f);
+			return findLeafPage(tid, dirtypages, currEntry.getRightChild(), perm, f);
 		} else {
 			throw new DbException("Fatal error: Internal page has no entries");
 		}
